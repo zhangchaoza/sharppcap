@@ -79,11 +79,11 @@ namespace SharpPcap.LibPcap
         /// </summary>
         public PhysicalAddress MacAddress { get; }
 
-        internal PcapInterface(pcap_if pcapIf, NetworkInterface networkInterface, ICredentials credentials)
+        internal PcapInterface(pcap_if_wrapper pcapIf, NetworkInterface networkInterface, ICredentials credentials)
         {
-            Name = pcapIf.Name;
-            Description = pcapIf.Description;
-            Flags = pcapIf.Flags;
+            Name = pcapIf.GetNameString();
+            Description = pcapIf.GetDescriptionString();
+            Flags = pcapIf.native.Flags;
             Addresses = new List<PcapAddress>();
             GatewayAddresses = new List<IPAddress>();
             Credentials = credentials;
@@ -105,7 +105,7 @@ namespace SharpPcap.LibPcap
             }
 
             // retrieve addresses
-            var address = pcapIf.Addresses;
+            var address = pcapIf.native.Addresses;
             while (address != IntPtr.Zero)
             {
                 // Marshal memory pointer into a sockaddr struct
@@ -228,20 +228,23 @@ namespace SharpPcap.LibPcap
             while (nextDevPtr != IntPtr.Zero)
             {
                 // Marshal pointer into a struct
-                var pcap_if_unmanaged = Marshal.PtrToStructure<pcap_if>(nextDevPtr);
+                var pcap_if_unmanaged = new pcap_if_wrapper()
+                {
+                    native = Marshal.PtrToStructure<pcap_if>(nextDevPtr)
+                };
                 NetworkInterface networkInterface = null;
                 foreach (var nic in nics)
                 {
                     // if the name and id match then we have found the NetworkInterface
                     // that matches the PcapDevice
-                    if (pcap_if_unmanaged.Name.EndsWith(nic.Id))
+                    if (pcap_if_unmanaged.GetNameString().EndsWith(nic.Id))
                     {
                         networkInterface = nic;
                     }
                 }
                 var pcap_if = new PcapInterface(pcap_if_unmanaged, networkInterface, credentials);
                 list.Add(pcap_if);
-                nextDevPtr = pcap_if_unmanaged.Next;
+                nextDevPtr = pcap_if_unmanaged.native.Next;
             }
 
             return list;

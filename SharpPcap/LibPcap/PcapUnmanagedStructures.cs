@@ -14,13 +14,12 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with SharpPcap.  If not, see <http://www.gnu.org/licenses/>.
 */
-/* 
+/*
  * Copyright 2005 Tamir Gal <tamir@tamirgal.com>
  * Copyright 2008-2009 Chris Morgan <chmorgan@gmail.com>
  */
 
 using System;
-using System.Net;
 using System.Runtime.InteropServices;
 
 namespace SharpPcap.LibPcap
@@ -36,11 +35,48 @@ namespace SharpPcap.LibPcap
         public struct pcap_if
         {
             public IntPtr /* pcap_if* */    Next;
-            public string Name;           /* name to hand to "pcap_open_live()" */
-            public string Description;    /* textual description of interface, or NULL */
+            public IntPtr Name;           /* name to hand to "pcap_open_live()" */
+            public IntPtr Description;    /* textual description of interface, or NULL */
             public IntPtr /*pcap_addr * */  Addresses;
             public UInt32 Flags;          /* PCAP_IF_ interface flags */
-        };
+        }
+
+        public struct pcap_if_wrapper
+        {
+            public pcap_if native;
+            private string nameString;
+            private string descriptionString;
+
+            public string GetNameString()
+            {
+                if (string.IsNullOrEmpty(nameString))
+                {
+                    nameString = GetUTF8String(native.Name);
+                }
+                return nameString;
+            }
+
+            public string GetDescriptionString()
+            {
+                if (string.IsNullOrEmpty(descriptionString))
+                {
+                    descriptionString = GetUTF8String(native.Description);
+                }
+                return descriptionString;
+            }
+
+            private string GetUTF8String(IntPtr ptr)
+            {
+                int offset = 0;
+                while (Marshal.ReadByte(ptr, offset) != 0)
+                {
+                    offset++;
+                }
+                byte[] bf = new byte[offset];
+                Marshal.Copy(ptr, bf, 0, offset);
+                return System.Text.Encoding.UTF8.GetString(bf);
+            }
+        }
 
         /// <summary>
         /// Representation of an interface address.
@@ -64,6 +100,7 @@ namespace SharpPcap.LibPcap
         public struct sockaddr
         {
             public UInt16 sa_family;      /* address family */
+
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 14)]
             public byte[] sa_data;        /* 14 bytes of protocol address */
         };
@@ -95,6 +132,7 @@ namespace SharpPcap.LibPcap
             // Disable warnings around this unused field
 #pragma warning disable 0169
             private readonly byte[] pad;
+
 #pragma warning restore 0169
         };
 
@@ -109,8 +147,10 @@ namespace SharpPcap.LibPcap
             public UInt16 sin6_family;    /* address family */
             public UInt16 sin6_port;      /* Transport layer port # */
             public UInt32 sin6_flowinfo;  /* IPv6 flow information */
+
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public byte[] sin6_addr;      /* IPv6 address */
+
             public UInt32 sin6_scope_id;  /* scope id (new in RFC2553) */
         };
 
@@ -126,11 +166,13 @@ namespace SharpPcap.LibPcap
             public UInt16 sll_hatype;
             public byte sll_pkttype;
             public byte sll_halen;
+
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
             public byte[] sll_addr;
         };
 
         #region timeval
+
         /// <summary>
         /// Windows and Unix differ in their memory models and make it difficult to
         /// support struct timeval in a single library, like this one, across
@@ -154,6 +196,7 @@ namespace SharpPcap.LibPcap
             //       use IntPtr. The size of IntPtr will change depending on the platform the
             //       code runs on, so it should handle the size properly on both 64 bit and 32 bit platforms.
             public IntPtr tv_sec;
+
             public IntPtr tv_usec;
         };
 
@@ -176,9 +219,11 @@ namespace SharpPcap.LibPcap
             public IntPtr tv_sec;
             public Int32 tv_usec;
         };
-        #endregion
+
+        #endregion timeval
 
         #region pcap_pkthdr
+
         /// <summary>
         /// Each packet in the dump file is prepended with this generic header.
         /// This gets around the problem of different headers for different
@@ -213,7 +258,7 @@ namespace SharpPcap.LibPcap
             public UInt32 len;            /* length this packet (off wire) */
         };
 
-        #endregion
+        #endregion pcap_pkthdr
 
         /// <summary>
         /// Packet data bytes
@@ -323,6 +368,7 @@ namespace SharpPcap.LibPcap
             /// Auth Type, 0=Null, 1= Password
             /// </summary>
             public IntPtr type;
+
             /// <summary>
             /// Username
             /// </summary>
@@ -333,7 +379,7 @@ namespace SharpPcap.LibPcap
             /// </summary>
             public string password;
         }
-        #endregion Unmanaged Structs Implementation
 
+        #endregion Unmanaged Structs Implementation
     }
 }
